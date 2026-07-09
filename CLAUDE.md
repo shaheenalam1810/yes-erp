@@ -36,6 +36,92 @@ Modular Monolith
 
 ---
 
+# Reference Documents
+
+The governance documents referenced throughout this file live in the repo root and `docs/`:
+
+- `PROJECT_CONSTITUTION.md` (root)
+- `docs/ARCHITECTURE.md`
+- `docs/DATABASE_ARCHITECTURE.md`
+- `docs/BUSINESS_RULES_WORKFLOW.md`
+- `docs/UI_UX_ARCHITECTURE.md`
+- `docs/MODULE_GUIDE.md`
+- `docs/DEPLOYMENT.md`
+- `DEVELOPMENT_ROADMAP.md` (root)
+
+`DATABASE_ARCHITECTURE.md` and `BUSINESS_RULES_WORKFLOW.md` are design-only: they define the target schema and workflows in prose and contain no code, migrations, or SQL. Do not copy field lists from them into migrations without checking `DEVELOPMENT_ROADMAP.md` to confirm the current phase actually calls for that table yet.
+
+---
+
+# Common Commands
+
+```bash
+composer install                 # install PHP dependencies
+npm install                      # install frontend dependencies
+
+php artisan migrate              # run migrations (MySQL by default, see .env)
+php artisan db:seed              # run database/seeders/DatabaseSeeder.php
+
+composer test                    # clears config cache, then runs the Pest suite
+vendor/bin/pest                  # run tests directly
+vendor/bin/pest --filter=<name>  # run a single test by name
+vendor/bin/pest tests/Feature/FoundationTest.php  # run a single test file
+
+composer analyse                 # PHPStan/Larastan, level 6, see phpstan.neon
+composer format                  # Laravel Pint, see pint.json
+
+composer dev                     # concurrently runs serve + queue:listen + vite dev
+```
+
+Test environment uses in-memory SQLite (`phpunit.xml`), sync queue driver, and array cache/session drivers — no external services required to run the suite.
+
+---
+
+# Current Codebase State
+
+This repository is in early foundation stage (roadmap Phase 1), not yet a full implementation of the constitution above. Concretely, as of now:
+
+- Only `Core`, `Accounting`, and `Inventory` have migrations (`database/migrations/`), and those tables do **not** yet have `uuid`, `created_by`/`updated_by`/`deleted_by`, or soft deletes — those platform conventions land in a later roadmap phase (Phase 6: Global Platform Services). Don't assume every table already follows the Database Rules above; check the actual migration first.
+- Most `modules/{Name}/routes/api.php` files are placeholder stub endpoints that just return a JSON list of planned resource names (e.g. `modules/Core/routes/api.php`). Only `Accounting` (`Account`) and `Inventory` (`Item`, `StockMovement`) have real Eloquent models so far.
+- `.agents/*.md` (architect, backend, database, frontend, qa, reviewer) exist as empty placeholder files.
+- Before adding a table, model, or route, check `DEVELOPMENT_ROADMAP.md` for the current phase's actual scope — don't jump ahead to fields/tables described in `DATABASE_ARCHITECTURE.md` that belong to a later phase.
+
+---
+
+# Architecture Map
+
+## App vs. Modules split
+
+- `app/` owns shared platform concerns: base model traits, tenancy context, middleware, the `ErpServiceProvider`, and cross-cutting `Foundation/` base classes.
+- `modules/{ModuleName}/` owns one approved business module (see Approved Modules list). Each module has its own `routes/api.php` and, as it grows, `Models/`, `Actions/`, `Services/`, `Policies/`, etc. per `docs/MODULE_GUIDE.md`.
+- Module autoloading is PSR-4 `Modules\` → `modules/` (see `composer.json`).
+
+## Tenancy flow (company context)
+
+1. Every request under `/api/v1` first hits `auth:sanctum` (`routes/api.php`), then the `erp.company` middleware alias (`routes/api/v1.php`), which resolves to `App\Http\Middleware\EnsureCompanyContext`.
+2. That middleware reads the `X-Company-Id` header (name configurable via `config/erp.php: tenant_header`), loads the active `Company`, and stores it on `App\Support\Tenancy\CurrentCompany` — a request-scoped singleton bound in `ErpServiceProvider::register()`.
+3. Controllers/actions/services pull the active company via the injected `CurrentCompany` instance rather than reading the header directly. `GET /api/v1/context` (`ContextController`) returns the resolved user/company/branch/warehouse/enabled-modules for debugging.
+4. Models that belong to a company use the `App\Models\Concerns\BelongsToCompany` trait for the `company()` relation; there is no global query scope yet enforcing company isolation automatically, so new queries must filter by company explicitly until that lands.
+
+## Routing structure
+
+`routes/api.php` → prefixes everything with `v1` and applies `auth:sanctum` → includes `routes/api/v1.php` → applies `erp.company` → `require`s each module's `modules/{Name}/routes/api.php`. To add endpoints to a module, edit that module's route file; to add a new module's routes, register the `require` line in `routes/api/v1.php` (module must first be added to the Approved Modules list and `config/erp.php: modules`).
+
+## Foundation base classes (`app/Foundation/`)
+
+- `Actions/Action.php` — abstract `readonly` base for single-purpose business actions (currently empty; extend per Architecture Rules).
+- `Services/Service.php` — abstract base for multi-step workflow services.
+- `Data/DataObject.php` — abstract `readonly` DTO base requiring `toArray(): array`.
+- `Http/ApiResponse.php` — `ApiResponse::success()` / `ApiResponse::error()` static helpers for the consistent JSON envelope (`success`, `message`, `data`/`errors`, `meta`) required by the API Rules.
+
+## Coding conventions already enforced by tooling
+
+- `declare(strict_types=1)` and `final` classes are the norm throughout `app/` and `modules/` — match this in new code.
+- Pint (`pint.json`) enforces the Laravel preset plus alphabetically-sorted imports and no unused imports.
+- PHPStan/Larastan (`phpstan.neon`) runs at level 6 over `app`, `modules`, `routes`, `config`, `tests`.
+
+---
+
 # Primary Goal
 
 Build a commercial-grade SME ERP.
