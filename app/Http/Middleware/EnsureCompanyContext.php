@@ -12,9 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 final readonly class EnsureCompanyContext
 {
-    public function __construct(private CurrentCompany $currentCompany)
-    {
-    }
+    public function __construct(private CurrentCompany $currentCompany) {}
 
     public function handle(Request $request, Closure $next): Response
     {

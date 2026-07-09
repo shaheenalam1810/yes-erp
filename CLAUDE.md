@@ -147,9 +147,9 @@ ONLY these modules may exist.
 3. Customer (CRM)
 4. Supplier Management
 5. Product Management
-6. Inventory
-7. Purchase
-8. Sales
+6. Inventory Management
+7. Purchase Management
+8. Sales Management
 9. POS
 10. Accounting
 11. Courier Integration

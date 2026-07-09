@@ -9,5 +9,4 @@ parameters:
         - config
         - tests
     level: 6
-    checkMissingIterableValueType: false
     reportUnmatchedIgnoredErrors: false

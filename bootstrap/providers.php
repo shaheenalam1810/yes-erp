@@ -1,7 +1,8 @@
 <?php
 
 declare(strict_types=1);
+use App\Providers\ErpServiceProvider;
 
 return [
-    App\Providers\ErpServiceProvider::class,
+    ErpServiceProvider::class,
 ];
