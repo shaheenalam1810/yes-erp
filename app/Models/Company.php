@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\CompanyFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 final class Company extends Model
 {
+    /** @use HasFactory<CompanyFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -30,11 +32,17 @@ final class Company extends Model
         ];
     }
 
+    /**
+     * @return HasMany<Branch, $this>
+     */
     public function branches(): HasMany
     {
         return $this->hasMany(Branch::class);
     }
 
+    /**
+     * @return HasMany<Warehouse, $this>
+     */
     public function warehouses(): HasMany
     {
         return $this->hasMany(Warehouse::class);

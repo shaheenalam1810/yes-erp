@@ -6,13 +6,17 @@ namespace Modules\Inventory\Models;
 
 use App\Models\Concerns\BelongsToCompany;
 use App\Models\Warehouse;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\Inventory\Database\Factories\StockMovementFactory;
 
 final class StockMovement extends Model
 {
     use BelongsToCompany;
+
+    /** @use HasFactory<StockMovementFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -36,13 +40,27 @@ final class StockMovement extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Warehouse, $this>
+     */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
+    /**
+     * @return BelongsTo<Item, $this>
+     */
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);
+    }
+
+    /**
+     * @return Factory<StockMovement>
+     */
+    protected static function newFactory(): Factory
+    {
+        return StockMovementFactory::new();
     }
 }

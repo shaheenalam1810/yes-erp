@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use function Pest\Laravel\get;
+
 it('loads the application health endpoint', function (): void {
-    $this->get('/up')->assertOk();
+    get('/up')->assertOk();
 });
